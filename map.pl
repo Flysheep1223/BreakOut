@@ -88,8 +88,35 @@ start :-
     format('Initial Health: 100~n'),
     format('Your Exit is at (50, 32), marked by "$".~n'),
     format('Recovery Zones are marked by H.~n'), 
-    format('Commands: move(up/down/left/right). Use tp(X, Y) to jump.~n'),
-    show_map.
+    format('Commands: WASD to move, Q to quit. (Real-time mode)~n'),
+    show_map,
+    game_loop.
+
+w :- move(up).
+s :- move(down).
+a :- move(left).
+d :- move(right).
+q :- handle_choice(e).
+
+game_loop :-
+    game_over, !.
+game_loop :-
+    get_single_char(Code),
+    handle_input(Code),
+    game_loop.
+
+handle_input(119) :- move(up), !.   % w
+handle_input(87)  :- move(up), !.   % W
+handle_input(115) :- move(down), !. % s
+handle_input(83)  :- move(down), !. % S
+handle_input(97)  :- move(left), !. % a
+handle_input(65)  :- move(left), !. % A
+handle_input(100) :- move(right), !. % d
+handle_input(68)  :- move(right), !. % D
+handle_input(113) :- handle_choice(e). % q
+handle_input(81)  :- handle_choice(e). % Q
+handle_input(_).
+
 
 is_wall(X, Y) :- wall(X, Y).
 
@@ -268,4 +295,5 @@ check_exit(_, _) :-
 
 end_game :- 
     \+ game_over,
+    assert(game_over),
     ask_restart.
