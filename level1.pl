@@ -1,13 +1,12 @@
 map_size(60, 34).
 exit_pos(50, 32).
-spawn_pos(30, 2). % 玩家进入冒险地图的初始位置
+spawn_pos(30, 2). % Player start position
 
-% 回到安全屋的门 (可选)
-% portal_pos(10, 0, 'safehouse.pl'). 
-
+% health_zone/4 defines recovery areas
 health_zone(46, 14, 56, 20).
 health_zone(6, 26, 16, 32).
 
+% Map segments (Walls)
 map_segment([22, 4], [22, 6]).
 map_segment([22, 6], [38, 6]).
 map_segment([38, 6], [38, 4]).

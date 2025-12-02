@@ -1,6 +1,7 @@
 :- dynamic wall/2, location/3, game_over/0, health/1.
 :- dynamic map_size/2, exit_pos/2, health_zone/4, map_segment/2, spawn_pos/2, portal_pos/3.
 :- use_module(library(readutil)).
+:- [ai_chaser].
 
 % --- Map Loading Logic ---
 load_level(LevelFile) :-
@@ -45,6 +46,14 @@ min_max(A, B, Min, Max) :-
 % --- Game Logic ---
 update_location(NewX, NewY) :-
     \+ wall(NewX, NewY),
+    % Check if player walked into Chaser
+    (   chaser(_, CX, CY), CX =:= NewX, CY =:= NewY
+    ->  format('~n*** You walked right into the Chaser! GAME OVER! ***~n'),
+        assert(game_over),
+        end_game,
+        !
+    ;   true
+    ),
     % Move logic first to allow stepping ONTO the portal
     retract(location(player, _, _)),
     assert(location(player, NewX, NewY)),
@@ -186,10 +195,30 @@ move(Direction) :-
     location(player, NewX, NewY),
     format('~nYou moved to (~w, ~w).~n', [NewX, NewY]),
     show_map,
+    chaser_tick,
     !.
 
 move(_) :-
     format('~nCannot move in that direction (Invalid direction, blocked, or out of bounds)!~n'),
+    show_map,
+    chaser_tick.
+
+% --- Teleport (Debug/Cheat) ---
+tp(NewX, NewY) :-
+    map_size(MaxX, MaxY),
+    NewX >= 0, NewX =< MaxX,
+    NewY >= 0, NewY =< MaxY,
+    update_location(NewX, NewY),
+    format('~n--- TELEPORT SUCCESSFUL ---~n'),
+    location(player, NewX_Actual, NewY_Actual),
+    format('You are now at (~w, ~w).~n', [NewX_Actual, NewY_Actual]),
+    show_map,
+    chaser_tick,
+    !.
+
+tp(NewX, NewY) :-
+    format('~n--- TELEPORT FAILED ---~n'),
+    format('Target (~w, ~w) is outside boundaries or occupied by a wall.~n', [NewX, NewY]),
     show_map.
 
 % --- Display ---
@@ -219,6 +248,12 @@ print_map_char(X, Y, _, _) :-
 print_map_char(X, Y, _, _) :-
     portal_pos(X, Y, _),
     format('O'), !.  % 'O' marks a portal/door
+
+print_map_char(X, Y, _, _) :-
+    chaser(_, CX, CY),
+    number(CX), number(CY), % Ensure CX and CY are bound numbers
+    CX =:= X, CY =:= Y,
+    format('C'), !.  % 'C' marks the Chaser
 
 print_map_char(X, Y, _, _) :-
     get_health_zone_char(X, Y, Char),
@@ -261,6 +296,7 @@ start_game :-
     ;   assert(location(player, 30, 2))
     ),
     format('~nGame started!~n'),
+    init_chaser(10, 2), % Generate chaser at (10, 2)
     format('Controls: WASD to move, Q to quit.~n'),
     show_map,
     game_loop.
