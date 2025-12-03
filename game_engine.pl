@@ -1,9 +1,10 @@
-:- dynamic wall/2, location/3, game_over/0, health/1.
+:- dynamic wall/2, location/3, game_over/0, health/1, player_atk/1.
 :- dynamic map_size/2, exit_pos/2, health_zone/4, map_segment/2, spawn_pos/2, portal_pos/3.
 :- use_module(library(readutil)).
 :- [enemies/ai_manager].
 :- [enemies/bfs_chaser].
 :- [enemies/random_walker].
+:- [combat_logic].
 
 % --- Map Loading Logic ---
 load_level(LevelFile) :-
@@ -49,27 +50,12 @@ min_max(A, B, Min, Max) :-
 % --- Game Logic ---
 update_location(NewX, NewY) :-
     \+ wall(NewX, NewY),
-    % Check if player walked into Chaser
-    (   chaser(_, CX, CY), CX =:= NewX, CY =:= NewY
-    ->  format('~n*** You walked right into the Chaser! GAME OVER! ***~n'),
-        assert(game_over),
-        end_game,
-        !
-    ;   true
-    ),
-    % Check if player walked into Random Walker
-    (   random_walker(_, RX, RY, _, _), RX =:= NewX, RY =:= NewY
-    ->  format('~n*** You walked right into the Random Walker! GAME OVER! ***~n'),
-        assert(game_over),
-        end_game,
-        !
-    ;   true
-    ),
     % Move logic first to allow stepping ONTO the portal
     retract(location(player, _, _)),
     assert(location(player, NewX, NewY)),
     restore_health,
     check_events(NewX, NewY),
+    check_combat,
     !.
 update_location(_, _) :-
     fail.
@@ -122,13 +108,7 @@ restore_health :-
     ).
 restore_health.
 
-decrease_health :-
-    health(H),
-    H > 0,
-    H_New is H - 1,
-    retract(health(H)),
-    assert(health(H_New)),
-    (H_New = 0 -> end_game_low_health ; true).
+
 
 end_game_low_health :-
     \+ game_over,
@@ -207,12 +187,14 @@ move(Direction) :-
     format('~nYou moved to (~w, ~w).~n', [NewX, NewY]),
     show_map,
     enemies_tick,
+    check_combat,
     !.
 
 move(_) :-
     format('~nCannot move in that direction (Invalid direction, blocked, or out of bounds)!~n'),
     show_map,
-    enemies_tick.
+    enemies_tick,
+    check_combat.
 
 % --- Teleport (Debug/Cheat) ---
 tp(NewX, NewY) :-
@@ -225,6 +207,7 @@ tp(NewX, NewY) :-
     format('You are now at (~w, ~w).~n', [NewX_Actual, NewY_Actual]),
     show_map,
     enemies_tick,
+    check_combat,
     !.
 
 tp(NewX, NewY) :-
@@ -261,13 +244,13 @@ print_map_char(X, Y, _, _) :-
     format('O'), !.  % 'O' marks a portal/door
 
 print_map_char(X, Y, _, _) :-
-    chaser(_, CX, CY),
+    chaser(_, CX, CY, _, _),
     number(CX), number(CY), % Ensure CX and CY are bound numbers
     CX =:= X, CY =:= Y,
     format('C'), !.  % 'C' marks the Chaser
 
 print_map_char(X, Y, _, _) :-
-    random_walker(_, RX, RY, _, _),
+    random_walker(_, RX, RY, _, _, _, _),
     number(RX), number(RY),
     RX =:= X, RY =:= Y,
     format('R'), !.  % 'R' marks the Random Walker
@@ -308,7 +291,9 @@ start_game :-
     retractall(game_over),
     retractall(location(player, _, _)),
     retractall(health(_)),
+    retractall(player_atk(_)),
     assert(health(100)),
+    assert(player_atk(10)),
     (   spawn_pos(SX, SY) -> assert(location(player, SX, SY))
     ;   assert(location(player, 30, 2))
     ),
