@@ -1,10 +1,14 @@
 :- dynamic wall/2, location/3, game_over/0, health/1, player_atk/1.
 :- dynamic map_size/2, exit_pos/2, health_zone/4, map_segment/2, spawn_pos/2, portal_pos/3.
+:- dynamic equipment/4.
 :- use_module(library(readutil)).
 :- [enemies/ai_manager].
 :- [enemies/bfs_chaser].
 :- [enemies/random_walker].
 :- [combat_logic].
+:- [items/equipments/sword].
+:- [items/equipments/knife].
+:- [item_manager].
 
 % --- Map Loading Logic ---
 load_level(LevelFile) :-
@@ -55,6 +59,7 @@ update_location(NewX, NewY) :-
     assert(location(player, NewX, NewY)),
     restore_health,
     check_events(NewX, NewY),
+    check_items(NewX, NewY),
     check_combat,
     !.
 update_location(_, _) :-
@@ -229,31 +234,36 @@ get_health_zone_char(X, Y, Char) :-
     health_zone(X_Min, Y_Min, X_Max, Y_Max),
     X >= X_Min, X =< X_Max,
     Y >= Y_Min, Y =< Y_Max,
-    Char = 'H',
+    Char = ' H',
     !.
 
 print_map_char(X, Y, X, Y) :-
-    format('@'), !.
+    format(' @'), !.
 
 print_map_char(X, Y, _, _) :-
     exit_pos(X, Y),
-    format('$'), !.
+    format(' $'), !.
 
 print_map_char(X, Y, _, _) :-
     portal_pos(X, Y, _),
-    format('O'), !.  % 'O' marks a portal/door
+    format(' O'), !.  % 'O' marks a portal/door
 
 print_map_char(X, Y, _, _) :-
     chaser(_, CX, CY, _, _),
     number(CX), number(CY), % Ensure CX and CY are bound numbers
     CX =:= X, CY =:= Y,
-    format('C'), !.  % 'C' marks the Chaser
+    format(' C'), !.  % 'C' marks the Chaser
 
 print_map_char(X, Y, _, _) :-
     random_walker(_, RX, RY, _, _, _, _),
     number(RX), number(RY),
     RX =:= X, RY =:= Y,
-    format('R'), !.  % 'R' marks the Random Walker
+    format(' R'), !.  % 'R' marks the Random Walker
+
+print_map_char(X, Y, _, _) :-
+    equipment(Type, _, EX, EY),
+    EX =:= X, EY =:= Y,
+    (Type = sword -> format(' S') ; format(' K')), !.
 
 print_map_char(X, Y, _, _) :-
     get_health_zone_char(X, Y, Char),
@@ -263,14 +273,14 @@ print_map_char(X, Y, _, _) :-
 print_map_char(X, Y, _, _) :-
     wall(X, Y),
     (   (is_wall(X, Y+1); is_wall(X, Y-1)),
-        \+ (is_wall(X+1, Y); is_wall(X-1, Y)) -> format('|')
+        \+ (is_wall(X+1, Y); is_wall(X-1, Y)) -> format(' |')
     ;   (is_wall(X+1, Y); is_wall(X-1, Y)),
-        \+ (is_wall(X, Y+1); is_wall(X, Y-1)) -> format('-')
-    ;   format('+')
+        \+ (is_wall(X, Y+1); is_wall(X, Y-1)) -> format(' -')
+    ;   format(' +')
     ), !.
 
 print_map_char(_, _, _, _) :-
-    format('.'), !.
+    format(' .'), !.
 
 draw_map(PlayerX, PlayerY) :-
     map_size(MaxX, MaxY),
@@ -292,6 +302,7 @@ start_game :-
     retractall(location(player, _, _)),
     retractall(health(_)),
     retractall(player_atk(_)),
+    retractall(equipment(_,_,_,_)),
     assert(health(100)),
     assert(player_atk(10)),
     (   spawn_pos(SX, SY) -> assert(location(player, SX, SY))
@@ -299,6 +310,7 @@ start_game :-
     ),
     format('~nGame started!~n'),
     init_enemies, % Generate enemies
+    spawn_items,  % Generate items
     format('Controls: WASD to move, Q to quit.~n'),
     show_map,
     game_loop.
