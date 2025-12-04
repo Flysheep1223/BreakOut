@@ -5,7 +5,8 @@ check_combat :-
     location(player, PX, PY),
     check_all_chasers(PX, PY),
     check_all_walkers(PX, PY),
-    check_hidden_bee(PX, PY).
+    check_hidden_bee(PX, PY),
+    check_timid_watched(PX, PY).
 
 check_all_chasers(PX, PY) :-
     chaser(Name, CX, CY, Atk, Stun),
@@ -23,6 +24,13 @@ check_all_walkers(PX, PY) :-
     fail.
 check_all_walkers(_, _).
 
+check_timid_watched(PX, PY) :-
+    timid_watched(Name, TX, TY, Atk, Stun),
+    distance(PX, PY, TX, TY, Dist),
+    Dist =< 1,
+    resolve_combat(player, Name, Atk, Stun, timid_watched, TX, TY).
+check_timid_watched(_, _).
+
 check_hidden_bee(PX, PY) :-
     hidden_bee(Name, BX, BY, Atk, Stun, _),
     distance(PX, PY, BX, BY, Dist),
@@ -35,13 +43,21 @@ resolve_combat(_, Name, EnemyAtk, Stun, Type, EX, EY) :-
     format('~n[COMBAT] Enemy ~w (Atk: ~w) is nearby!~n', [Name, EnemyAtk]),
     (   PlayerAtk >= EnemyAtk
     ->  format('*** VICTORY! You defeated ~w! ***~n', [Name]),
-        remove_enemy(Type, Name)
+        remove_enemy(Type, Name),
+        (Type = timid_watched -> absorb_power(EnemyAtk) ; true)
     ;   % Player weaker
         Damage is EnemyAtk - PlayerAtk,
         format('*** DEFEAT! You took ~w damage! ***~n', [Damage]),
         decrease_health(Damage),
         stun_enemy(Type, Name, EX, EY, EnemyAtk, Stun)
     ).
+
+absorb_power(Amount) :-
+    player_atk(Atk),
+    NewAtk is Atk + Amount,
+    retract(player_atk(Atk)),
+    assert(player_atk(NewAtk)),
+    format('~n*** POWER ABSORPTION! Your Attack increased by ~w! (Current: ~w) ***~n', [Amount, NewAtk]).
 
 remove_enemy(chaser, Name) :-
     retract(chaser(Name, _, _, _, _)),
@@ -52,6 +68,9 @@ remove_enemy(random_walker, Name) :-
 remove_enemy(hidden_bee, Name) :-
     retract(hidden_bee(Name, _, _, _, _, _)),
     retractall(bee_spike(_, _)), % Clear spikes when boss dies
+    format('~w has been removed.~n', [Name]).
+remove_enemy(timid_watched, Name) :-
+    retract(timid_watched(Name, _, _, _, _)),
     format('~w has been removed.~n', [Name]).
 
 stun_enemy(chaser, Name, X, Y, Atk, _) :-
@@ -65,6 +84,10 @@ stun_enemy(random_walker, Name, X, Y, Atk, _) :-
 stun_enemy(hidden_bee, Name, X, Y, Atk, _) :-
     retract(hidden_bee(Name, X, Y, Atk, _, Cooldown)),
     assertz(hidden_bee(Name, X, Y, Atk, 2, Cooldown)),
+    format('~w is stunned for 2 turns.~n', [Name]).
+stun_enemy(timid_watched, Name, X, Y, Atk, _) :-
+    retract(timid_watched(Name, X, Y, Atk, _)),
+    assertz(timid_watched(Name, X, Y, Atk, 2)),
     format('~w is stunned for 2 turns.~n', [Name]).
 
 distance(X1, Y1, X2, Y2, Dist) :-
