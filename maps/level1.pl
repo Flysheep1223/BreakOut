@@ -3,8 +3,8 @@ exit_pos(50, 32).
 spawn_pos(30, 2). % Player start position
 
 % health_zone/4 defines single-use health packages
-health_zone(46, 14, 56, 20). % Will spawn package at 46, 14
-health_zone(6, 26, 16, 32).  % Will spawn package at 6, 26
+% health_zone(46, 14, 56, 20). % Will spawn package at 46, 14
+health_zone(6, 26).  % Will spawn package at 6, 26
 
 % Map segments (Walls)
 % Above spawn point
@@ -22,10 +22,15 @@ map_segment([36, 22], [24, 22]).
 map_segment([24, 22], [24, 18]).
 
 % Bottom-right graveyard
-map_segment([44, 4], [44, 8]).
-map_segment([48, 2], [48, 8]).
-map_segment([52, 2], [52, 8]).
-map_segment([56, 2], [56, 8]).
+map_segment([45, 3], [45, 10]).
+map_segment([49, 3], [49, 11]).
+map_segment([53, 3], [53, 11]).
+map_segment([57, 3], [57, 11]).
+
+map_segment([45, 14], [45, 20]).
+map_segment([49, 14], [49, 20]).
+map_segment([53, 14], [53, 20]).
+map_segment([57, 14], [57, 20]).
 
 % Bottom-left room
 map_segment([16, 12], [4, 12]).
