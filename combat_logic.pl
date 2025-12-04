@@ -9,7 +9,7 @@ check_combat :-
     check_timid_watched(PX, PY).
 
 check_all_chasers(PX, PY) :-
-    chaser(Name, CX, CY, Atk, Stun),
+    chaser(Name, CX, CY, Atk, Stun, _),
     distance(PX, PY, CX, CY, Dist),
     Dist =< 1, % 8 surrounding cells or same cell
     resolve_combat(player, Name, Atk, Stun, chaser, CX, CY),
@@ -60,7 +60,7 @@ absorb_power(Amount) :-
     format('~n*** POWER ABSORPTION! Your Attack increased by ~w! (Current: ~w) ***~n', [Amount, NewAtk]).
 
 remove_enemy(chaser, Name) :-
-    retract(chaser(Name, _, _, _, _)),
+    retract(chaser(Name, _, _, _, _, _)),
     format('~w has been removed.~n', [Name]).
 remove_enemy(random_walker, Name) :-
     retract(random_walker(Name, _, _, _, _, _, _)),
@@ -74,8 +74,8 @@ remove_enemy(timid_watched, Name) :-
     format('~w has been removed.~n', [Name]).
 
 stun_enemy(chaser, Name, X, Y, Atk, _) :-
-    retract(chaser(Name, X, Y, Atk, _)),
-    assertz(chaser(Name, X, Y, Atk, 2)), % Stun for 2 turns
+    retract(chaser(Name, X, Y, Atk, _, Active)),
+    assertz(chaser(Name, X, Y, Atk, 2, Active)), % Stun for 2 turns
     format('~w is stunned for 2 turns.~n', [Name]).
 stun_enemy(random_walker, Name, X, Y, Atk, _) :-
     retract(random_walker(Name, X, Y, Dx, Dy, Atk, _)),
