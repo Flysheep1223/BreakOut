@@ -4,7 +4,8 @@
 check_combat :-
     location(player, PX, PY),
     check_all_chasers(PX, PY),
-    check_all_walkers(PX, PY).
+    check_all_walkers(PX, PY),
+    check_static_boss(PX, PY).
 
 check_all_chasers(PX, PY) :-
     chaser(Name, CX, CY, Atk, Stun),
@@ -21,6 +22,13 @@ check_all_walkers(PX, PY) :-
     resolve_combat(player, Name, Atk, Stun, random_walker, RX, RY),
     fail.
 check_all_walkers(_, _).
+
+check_static_boss(PX, PY) :-
+    static_boss(Name, BX, BY, Atk, Stun, _),
+    distance(PX, PY, BX, BY, Dist),
+    Dist =< 1,
+    resolve_combat(player, Name, Atk, Stun, static_boss, BX, BY).
+check_static_boss(_, _).
 
 resolve_combat(_, Name, EnemyAtk, Stun, Type, EX, EY) :-
     player_atk(PlayerAtk),
@@ -41,6 +49,10 @@ remove_enemy(chaser, Name) :-
 remove_enemy(random_walker, Name) :-
     retract(random_walker(Name, _, _, _, _, _, _)),
     format('~w has been removed.~n', [Name]).
+remove_enemy(static_boss, Name) :-
+    retract(static_boss(Name, _, _, _, _, _)),
+    retractall(bee_spike(_, _)), % Clear spikes when boss dies
+    format('~w has been removed.~n', [Name]).
 
 stun_enemy(chaser, Name, X, Y, Atk, _) :-
     retract(chaser(Name, X, Y, Atk, _)),
@@ -49,6 +61,10 @@ stun_enemy(chaser, Name, X, Y, Atk, _) :-
 stun_enemy(random_walker, Name, X, Y, Atk, _) :-
     retract(random_walker(Name, X, Y, Dx, Dy, Atk, _)),
     assertz(random_walker(Name, X, Y, Dx, Dy, Atk, 2)),
+    format('~w is stunned for 2 turns.~n', [Name]).
+stun_enemy(static_boss, Name, X, Y, Atk, _) :-
+    retract(static_boss(Name, X, Y, Atk, _, Cooldown)),
+    assertz(static_boss(Name, X, Y, Atk, 2, Cooldown)),
     format('~w is stunned for 2 turns.~n', [Name]).
 
 distance(X1, Y1, X2, Y2, Dist) :-
@@ -64,6 +80,6 @@ decrease_health(Amount) :-
     (H_New =< 0 -> 
         assert(health(0)), 
         end_game_low_health 
-    ;   assert(health(H_New)),
-        format('Health dropped to ~w.~n', [H_New])
+    ;   assert(health(H_New))
+        % Removed inline print: format('Health dropped to ~w.~n', [H_New])
     ).
