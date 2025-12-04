@@ -24,14 +24,17 @@ scale_enemies :-
     scale_timid_watched.
 
 scale_chasers :-
-    findall([Name, X, Y, Atk, Stun], chaser(Name, X, Y, Atk, Stun), Chasers),
+    findall([Name, X, Y, Atk, Stun, Active], chaser(Name, X, Y, Atk, Stun, Active), Chasers),
     update_chasers(Chasers).
 
 update_chasers([]).
-update_chasers([[Name, X, Y, Atk, Stun] | Rest]) :-
-    NewAtk is floor(Atk * 1.1), % Increase by 10%
-    retract(chaser(Name, X, Y, Atk, Stun)),
-    assertz(chaser(Name, X, Y, NewAtk, Stun)),
+update_chasers([[Name, X, Y, Atk, Stun, Active] | Rest]) :-
+    (   Active =:= 0
+    ->  NewAtk is floor(Atk * 1.1), % Increase by 10% only if inactive
+        retract(chaser(Name, X, Y, Atk, Stun, Active)),
+        assertz(chaser(Name, X, Y, NewAtk, Stun, Active))
+    ;   true % Active chasers do not scale
+    ),
     update_chasers(Rest).
 
 scale_walkers :-
