@@ -1,5 +1,5 @@
 :- dynamic wall/2, location/3, game_over/0, health/1, player_atk/1, turn_count/1, scaling_level/1.
-:- dynamic map_size/2, exit_pos/2, health_zone/4, map_segment/2, spawn_pos/2, portal_pos/3.
+:- dynamic map_size/2, exit_pos/2, health_zone/2, map_segment/2, spawn_pos/2, portal_pos/3.
 :- dynamic equipment/4.
 :- use_module(library(readutil)).
 :- [enemies/ai_manager].
@@ -19,7 +19,7 @@ load_level(LevelFile) :-
     retractall(wall(_, _)),
     retractall(map_size(_, _)),
     retractall(exit_pos(_, _)),
-    retractall(health_zone(_, _, _, _)),
+    retractall(health_zone(_, _)),
     retractall(map_segment(_, _)),
     retractall(spawn_pos(_, _)),
     retractall(portal_pos(_, _, _)),
@@ -30,7 +30,7 @@ load_level(LevelFile) :-
     init_healthy_packages. % Spawn new packages from map data
 
 init_healthy_packages :-
-    findall([X, Y], health_zone(X, Y, _, _), Zones),
+    findall([X, Y], health_zone(X, Y), Zones),
     spawn_packages_from_zones(Zones).
 
 spawn_packages_from_zones([]).
