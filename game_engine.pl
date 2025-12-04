@@ -68,6 +68,10 @@ min_max(A, B, Min, Max) :-
 
 :- discontiguous update_location/2.
 
+:- discontiguous move/1.
+:- discontiguous check_spike_collision/0.
+:- discontiguous check_spike_collision/2.
+
 % --- Game Logic ---
 update_location(NewX, NewY) :-
     \+ wall(NewX, NewY),
@@ -153,19 +157,24 @@ move(Direction) :-
     show_map,
     enemies_tick,
     % Re-check spike collision AFTER enemies move (for "walking into" or "spawned on top" cases)
-    location(player, FinalX, FinalY),
-    check_spike_collision(FinalX, FinalY),
+    location(player, _FinalX, _FinalY),
     check_combat,
+    check_spike_collision,
     !.
 
+check_spike_collision :-
+    location(player, X, Y),
+    bee_spike(SX, SY),
+    SX =:= X, SY =:= Y,
+    format('~n*** OUCH! You stepped on a spike! (-5 HP) ***~n'),
+    decrease_health(5),
+    !.
 move(_) :-
     format('~nCannot move in that direction (Invalid direction, blocked, or out of bounds)!~n'),
     show_map,
     enemies_tick,
-    % Re-check spike collision even if player did not move (spike might move onto player)
-    location(player, FinalX, FinalY),
-    check_spike_collision(FinalX, FinalY),
-    check_combat.
+    check_combat,
+    check_spike_collision.
 
 % --- Teleport (Debug/Cheat) ---
 tp(NewX, NewY) :-
@@ -217,13 +226,12 @@ print_map_char(X, Y, PlayerX, PlayerY) :-
     % But @ usually covers everything.
     % If we want to see if they overlap visually:
     (   bee_spike(X, Y)
-    ->  format(' X'), % Show 'X' if player is hit/overlapping spike
-        decrease_health(5)
+    ->  format(' X') % Show 'X' if player is hit/overlapping spike
     ;   format(' @')
     ), !.
 
 print_map_char(X, Y, _, _) :-
-    chaser(_, CX, CY, _, _),
+    chaser(_, CX, CY, _, _, _),
     number(CX), number(CY),
     CX =:= X, CY =:= Y,
     format(' C'), !.
@@ -326,4 +334,12 @@ handle_input(_) :- format('~nUnknown command.~n').
 % Mode: new (check against moved spikes)
 
 check_spike_collision(_, _) :- !.
+check_spike_collision :-
+    location(player, X, Y),
+    bee_spike(SX, SY),
+    SX =:= X, SY =:= Y,
+    format('~n*** OUCH! You stepped on a spike! (-5 HP) ***~n'),
+    decrease_health(5),
+    !.
+check_spike_collision.
 check_spike_collision(_, _).
