@@ -22,10 +22,10 @@ hidden_bee_tick :-
     ->  NewStun is Stun - 1,
         ResetCooldown = Cooldown, % Fix singleton variable
         format('~n[Boss] ~w is stunned for ~w more turns.~n', [Name, NewStun])
-    ;   % 2. Handle Attack Logic (Every 4 turns)
+    ;   % 2. Handle Attack Logic (Every 5 turns)
         NewStun = 0,
         NewCooldown is Cooldown + 1,
-        (   NewCooldown >= 4
+        (   NewCooldown >= 5
         ->  spawn_spikes,
             ResetCooldown = 0,
             format('~n[Boss] ~w spits out a wave of spikes!~n', [Name])
@@ -50,8 +50,9 @@ spawn_spikes :-
     length(SpikeYs, 5),
     append(SpikeYs, _, RandomY),
     
-    % Create spikes at X=26
-    create_spikes(26, SpikeYs).
+    % Create two identical columns of spikes at X=26 and X=27
+    create_spikes(26, SpikeYs),
+    create_spikes(27, SpikeYs).
 
 create_spikes(_, []).
 create_spikes(X, [Y|Rest]) :-
