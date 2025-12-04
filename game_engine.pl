@@ -1,6 +1,6 @@
-:- dynamic wall/2, location/3, game_over/0, health/1, player_atk/1, turn_count/1, scaling_level/1.
+:- dynamic wall/2, location/3, game_over/0, health/1, player_atk/1, turn_count/1, scaling_level/1, score/1.
 :- dynamic map_size/2, exit_pos/2, health_zone/2, map_segment/2, spawn_pos/2, portal_pos/3.
-:- dynamic equipment/4.
+:- dynamic equipment/4, treasure/3.
 :- use_module(library(readutil)).
 :- [enemies/ai_manager].
 :- [enemies/bfs_chaser].
@@ -11,6 +11,9 @@
 :- [items/equipments/sword].
 :- [items/equipments/knife].
 :- [items/tools/heathy_package].
+:- [items/treasures/diamond].
+:- [items/treasures/gold].
+:- [items/treasures/silver].
 :- [items/item_manager].
 :- [scaling_manager].
 
@@ -116,9 +119,12 @@ change_map(TargetMap) :-
 check_exit(X, Y) :-
     exit_pos(X, Y),
     \+ game_over,
+    score(S),
     format('~n**************************************************~n'),
     format('*** CONGRATULATIONS! You reached the destination! ***~n'),
+    format('*** FINAL SCORE: ~w ***~n', [S]),
     format('**************************************************~n'),
+    assert(game_over),
     end_game.
 check_exit(_, _).
 
@@ -141,7 +147,7 @@ end_game_low_health :-
     end_game.
 
 end_game :-
-    format('~nType "start_game." to play again.~n').
+    format('~nType "start." to play again.~n').
 
 % --- Input Loop ---
 move(Direction) :-
@@ -196,7 +202,8 @@ show_map :-
     draw_map(X, Y),
     health(H),
     player_atk(Atk),
-    format('Health: ~w | Attack: ~w~n', [H, Atk]),
+    score(S),
+    format('Health: ~w | Attack: ~w | Score: ~w~n', [H, Atk, S]),
     (   bee_spike(X, Y)
     ->  format('~n*** OUCH! You stepped on a spike! (-5 HP) ***~n')
     ;   true
@@ -270,6 +277,18 @@ print_map_char(X, Y, _, _) :-
     format(' H'), !.
 
 print_map_char(X, Y, _, _) :-
+    treasure(Type, TX, TY),
+    TX =:= X, TY =:= Y,
+    (Type = diamond -> format(' O')
+    ; Type = gold -> format(' G')
+    ; format(' V')
+    ), !.
+
+print_map_char(X, Y, _, _) :-
+    exit_pos(X, Y),
+    format(' $'), !.
+
+print_map_char(X, Y, _, _) :-
     wall(X, Y),
     (   (is_wall(X, Y+1); is_wall(X, Y-1)),
         \+ (is_wall(X+1, Y); is_wall(X-1, Y)) -> format('|')
@@ -293,11 +312,14 @@ start_game :-
     retractall(health(_)),
     retractall(player_atk(_)),
     retractall(equipment(_,_,_,_)),
+    retractall(treasure(_,_,_)),
     retractall(turn_count(_)),
     retractall(scaling_level(_)),
+    retractall(score(_)),
     assert(health(100)),
     assert(player_atk(10)),
     assert(turn_count(0)),
+    assert(score(0)),
     assert(scaling_level(0)),
     (   spawn_pos(SX, SY) -> assert(location(player, SX, SY))
     ;   assert(location(player, 30, 2))
