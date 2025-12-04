@@ -9,7 +9,7 @@
 :- [combat_logic].
 :- [items/equipments/sword].
 :- [items/equipments/knife].
-:- [item_manager].
+:- [items/item_manager].
 :- [scaling_manager].
 
 % --- Map Loading Logic ---
