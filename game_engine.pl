@@ -5,6 +5,7 @@
 :- [enemies/ai_manager].
 :- [enemies/bfs_chaser].
 :- [enemies/random_walker].
+:- [enemies/static_boss].
 :- [combat_logic].
 :- [items/equipments/sword].
 :- [items/equipments/knife].
@@ -97,91 +98,26 @@ check_exit(_, _).
 
 restore_health :-
     location(player, X, Y),
-    health_zone(X_Min, Y_Min, X_Max, Y_Max),
-    X >= X_Min, X =< X_Max,
-    Y >= Y_Min, Y =< Y_Max,
-    !,
+    health_zone(X, Y, Amount, Message),
     health(H),
-    H_Max = 100,
-    Recovery = 5,
-    H_Candidate is H + Recovery,
-    (H_Candidate > H_Max -> H_New = H_Max ; H_New = H_Candidate),
-    (H_New > H ->
-        retract(health(H)),
-        assert(health(H_New)),
-        format('~n[Recovery!] +5 HP (Current: ~w/~w)~n', [H_New, H_Max])
-    ;
-        true
-    ).
+    H < 100,
+    NewH is min(100, H + Amount),
+    retract(health(H)),
+    assert(health(NewH)),
+    format('~n~w (Health +~w, Current: ~w)~n', [Message, Amount, NewH]),
+    !.
 restore_health.
-
-
 
 end_game_low_health :-
     \+ game_over,
-    format('~n!!! HEALTH DEPLETED !!!~n'),
-    format('*** GAME OVER: Your health reached 0. ***~n'),
+    format('~n*** You have died from your injuries... GAME OVER ***~n'),
+    assert(game_over),
     end_game.
 
 end_game :-
-    \+ game_over,
-    assert(game_over),
-    ask_restart.
+    format('~nType "start_game." to play again.~n').
 
-ask_restart :-
-    format('Would you like to restart the game or exit? (R/E): '),
-    read_line_to_string(user_input, ChoiceRaw),
-    (   ChoiceRaw = "" ->
-            read_line_to_string(user_input, Choice)
-    ;   Choice = ChoiceRaw
-    ),
-    normalize_choice(Choice, Normalized),
-    handle_choice(Normalized),
-    !.
-
-normalize_choice(C, N) :-
-    string_lower(C, L),
-    (L = "r" -> N = r ; L = "e" -> N = e ; N = invalid).
-
-handle_choice(r) :-
-    format('\n--- Performing Full Game Restart ---\n\n'),
-    start_game,
-    !.
-
-handle_choice(e) :-
-    format('\nThank you for playing! Goodbye.\n'),
-    halt.
-
-handle_choice(_) :-
-    format('Invalid choice. Please enter R or E.\n'),
-    ask_restart.
-
-% --- Movement & Input ---
-game_loop :-
-    game_over, !.
-game_loop :-
-    get_single_char(Code),
-    handle_input(Code),
-    game_loop.
-
-handle_input(119) :- move(up), !.   % w
-handle_input(87)  :- move(up), !.   % W
-handle_input(115) :- move(down), !. % s
-handle_input(83)  :- move(down), !. % S
-handle_input(97)  :- move(left), !. % a
-handle_input(65)  :- move(left), !. % A
-handle_input(100) :- move(right), !. % d
-handle_input(68)  :- move(right), !. % D
-handle_input(113) :- handle_choice(e). % q
-handle_input(81)  :- handle_choice(e). % Q
-handle_input(_).
-
-move(_) :-
-    game_over,
-    !,
-    format('~n!!! Game Over! You cannot move further. !!!~n'),
-    fail.
-
+% --- Input Loop ---
 move(Direction) :-
     location(player, X, Y),
     map_size(MaxX, MaxY),
@@ -194,6 +130,9 @@ move(Direction) :-
     format('~nYou moved to (~w, ~w).~n', [NewX, NewY]),
     show_map,
     enemies_tick,
+    % Re-check spike collision AFTER enemies move (for "walking into" or "spawned on top" cases)
+    location(player, FinalX, FinalY),
+    check_spike_collision(FinalX, FinalY),
     check_combat,
     !.
 
@@ -201,6 +140,9 @@ move(_) :-
     format('~nCannot move in that direction (Invalid direction, blocked, or out of bounds)!~n'),
     show_map,
     enemies_tick,
+    % Re-check spike collision even if player did not move (spike might move onto player)
+    location(player, FinalX, FinalY),
+    check_spike_collision(FinalX, FinalY),
     check_combat.
 
 % --- Teleport (Debug/Cheat) ---
@@ -217,72 +159,17 @@ tp(NewX, NewY) :-
     check_combat,
     !.
 
-tp(NewX, NewY) :-
-    format('~n--- TELEPORT FAILED ---~n'),
-    format('Target (~w, ~w) is outside boundaries or occupied by a wall.~n', [NewX, NewY]),
-    show_map.
-
 % --- Display ---
 show_map :-
-    (   location(player, PlayerX, PlayerY), health(H)
-    ->  format('~n[HEALTH: ~w]~n', [H]),
-        draw_map(PlayerX, PlayerY)
-    ;   format('~nERROR: Player position is not set.~n')
+    location(player, X, Y),
+    draw_map(X, Y),
+    health(H),
+    player_atk(Atk),
+    format('Health: ~w | Attack: ~w~n', [H, Atk]),
+    (   bee_spike(X, Y)
+    ->  format('~n*** OUCH! You stepped on a spike! (-5 HP) ***~n')
+    ;   true
     ).
-
-is_wall(X, Y) :- wall(X, Y).
-
-get_health_zone_char(X, Y, Char) :-
-    health_zone(X_Min, Y_Min, X_Max, Y_Max),
-    X >= X_Min, X =< X_Max,
-    Y >= Y_Min, Y =< Y_Max,
-    Char = ' H',
-    !.
-
-print_map_char(X, Y, X, Y) :-
-    format(' @'), !.
-
-print_map_char(X, Y, _, _) :-
-    exit_pos(X, Y),
-    format(' $'), !.
-
-print_map_char(X, Y, _, _) :-
-    portal_pos(X, Y, _),
-    format(' O'), !.  % 'O' marks a portal/door
-
-print_map_char(X, Y, _, _) :-
-    chaser(_, CX, CY, _, _),
-    number(CX), number(CY), % Ensure CX and CY are bound numbers
-    CX =:= X, CY =:= Y,
-    format(' C'), !.  % 'C' marks the Chaser
-
-print_map_char(X, Y, _, _) :-
-    random_walker(_, RX, RY, _, _, _, _),
-    number(RX), number(RY),
-    RX =:= X, RY =:= Y,
-    format(' R'), !.  % 'R' marks the Random Walker
-
-print_map_char(X, Y, _, _) :-
-    equipment(Type, _, EX, EY),
-    EX =:= X, EY =:= Y,
-    (Type = sword -> format(' S') ; format(' K')), !.
-
-print_map_char(X, Y, _, _) :-
-    get_health_zone_char(X, Y, Char),
-    format('~w', [Char]),
-    !.
-
-print_map_char(X, Y, _, _) :-
-    wall(X, Y),
-    (   (is_wall(X, Y+1); is_wall(X, Y-1)),
-        \+ (is_wall(X+1, Y); is_wall(X-1, Y)) -> format(' |')
-    ;   (is_wall(X+1, Y); is_wall(X-1, Y)),
-        \+ (is_wall(X, Y+1); is_wall(X, Y-1)) -> format(' -')
-    ;   format(' +')
-    ), !.
-
-print_map_char(_, _, _, _) :-
-    format(' .'), !.
 
 draw_map(PlayerX, PlayerY) :-
     map_size(MaxX, MaxY),
@@ -291,15 +178,77 @@ draw_map(PlayerX, PlayerY) :-
     format('~n+--- Map (Current Position: @) [Turn: ~w] [Enemy Lv: ~w] ---+~n', [Turn, Lvl]),
     between(0, MaxY, Y_index),
     Y is MaxY - Y_index,
-    between(0, MaxX, X),
-    print_map_char(X, Y, PlayerX, PlayerY),
-    (   X = MaxX -> format('~n')
-    ;   true
-    ),
+    draw_row(0, MaxX, Y, PlayerX, PlayerY),
     fail.
 draw_map(_, _) :-
-    format('+----------------------------------+~n').
+    format('+----------------------------------------+~n').
 
+draw_row(X, MaxX, _, _, _) :- X > MaxX, format('~n'), !.
+draw_row(X, MaxX, Y, PlayerX, PlayerY) :-
+    print_map_char(X, Y, PlayerX, PlayerY),
+    NextX is X + 1,
+    draw_row(NextX, MaxX, Y, PlayerX, PlayerY).
+
+print_map_char(X, Y, PlayerX, PlayerY) :-
+    X =:= PlayerX, Y =:= PlayerY,
+    % Check if spike is UNDER player to render it?
+    % But @ usually covers everything.
+    % If we want to see if they overlap visually:
+    (   bee_spike(X, Y)
+    ->  format(' X'), % Show 'X' if player is hit/overlapping spike
+        decrease_health(5)
+    ;   format(' @')
+    ), !.
+
+print_map_char(X, Y, _, _) :-
+    chaser(_, CX, CY, _, _),
+    number(CX), number(CY),
+    CX =:= X, CY =:= Y,
+    format(' C'), !.
+
+print_map_char(X, Y, _, _) :-
+    random_walker(_, RX, RY, _, _, _, _),
+    number(RX), number(RY),
+    RX =:= X, RY =:= Y,
+    format(' R'), !.
+
+print_map_char(X, Y, _, _) :-
+    static_boss(_, BX, BY, _, _, _),
+    number(BX), number(BY),
+    BX =:= X, BY =:= Y,
+    format(' B'), !.
+
+print_map_char(X, Y, _, _) :-
+    bee_spike(SX, SY),
+    SX =:= X, SY =:= Y,
+    format(' ^'), !.
+
+print_map_char(X, Y, _, _) :-
+    equipment(Type, _, EX, EY),
+    EX =:= X, EY =:= Y,
+    (Type = sword -> format(' S') ; format('K')), !.
+
+print_map_char(X, Y, _, _) :-
+    get_health_zone_char(X, Y, Char),
+    format('~w', [Char]), !.
+
+print_map_char(X, Y, _, _) :-
+    wall(X, Y),
+    (   (is_wall(X, Y+1); is_wall(X, Y-1)),
+        \+ (is_wall(X+1, Y); is_wall(X-1, Y)) -> format('|')
+    ;   (is_wall(X+1, Y); is_wall(X-1, Y)),
+        \+ (is_wall(X, Y+1); is_wall(X, Y-1)) -> format('-')
+    ;   format(' +')
+    ), !.
+
+print_map_char(_, _, _, _) :-
+    format(' .'), !.
+
+is_wall(X, Y) :- wall(X, Y).
+
+get_health_zone_char(X, Y, 'H') :- health_zone(X, Y, _, _).
+
+% --- Main Loop ---
 start_game :-
     load_level('level1.pl'),
     retractall(game_over),
@@ -317,8 +266,35 @@ start_game :-
     ;   assert(location(player, 30, 2))
     ),
     format('~nGame started!~n'),
-    init_enemies, % Generate enemies
-    spawn_items,  % Generate items
+    init_enemies,
+    spawn_items,
     format('Controls: WASD to move, Q to quit.~n'),
     show_map,
     game_loop.
+
+game_loop :-
+    game_over, !.
+game_loop :-
+    get_action(Input),
+    handle_input(Input),
+    game_loop.
+
+get_action(Input) :-
+    format('~nAction: '),
+    get_single_char(Code),
+    char_code(Input, Code),
+    format('~w~n', [Input]).
+
+handle_input('w') :- move(up).
+handle_input('s') :- move(down).
+handle_input('a') :- move(left).
+handle_input('d') :- move(right).
+handle_input('q') :- format('~nQuitting...~n'), assert(game_over).
+handle_input(_) :- format('~nUnknown command.~n').
+
+% --- New Spike Check ---
+% Mode: old (check against existing spikes before they move)
+% Mode: new (check against moved spikes)
+
+check_spike_collision(_, _) :- !.
+check_spike_collision(_, _).
