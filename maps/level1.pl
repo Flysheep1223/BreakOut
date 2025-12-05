@@ -24,7 +24,7 @@ map_segment([22, 4], [22, 6]).
 map_segment([22, 6], [38, 6]).
 map_segment([38, 6], [38, 4]).
 
-% Boss room
+% Delta Plance
 map_segment([24, 14], [24, 10]).
 map_segment([24, 10], [28, 10]).
 map_segment([32, 10], [36, 10]).
@@ -59,6 +59,9 @@ map_segment([7, 10], [13, 10]).
 % Middle-left room (Timid Watched Arena)
 map_segment([4, 22], [18, 22]).
 map_segment([18, 16], [4, 16]).
+
+map_segment([18, 21], [18, 22]).
+map_segment([18, 16], [18, 17]).
 
 % map_segment([18, 22], [18, 16]).
 map_segment([4, 16], [4, 22]).
