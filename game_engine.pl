@@ -7,6 +7,7 @@
 :- [enemies/random_walker].
 :- [enemies/hidden_bee].
 :- [enemies/timid_watched].
+:- [enemies/smart_thief].
 :- [combat_logic].
 :- [items/equipments/sword].
 :- [items/equipments/knife].
@@ -280,6 +281,12 @@ print_map_char(X, Y, _, _) :-
     number(TX), number(TY),
     TX =:= X, TY =:= Y,
     format(' T'), !.
+
+print_map_char(X, Y, _, _) :-
+    smart_thief(_, SX, SY, _, _),
+    number(SX), number(SY),
+    SX =:= X, SY =:= Y,
+    format(' I'), !.
 
 print_map_char(X, Y, _, _) :-
     hidden_bee(_, BX, BY, _, _, _),
