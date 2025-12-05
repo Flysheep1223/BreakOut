@@ -3,22 +3,31 @@
 :- dynamic treasure_value/3.
 
 spawn_items :-
-    spawn_random_item(sword),
-    spawn_random_item(knife),
+    spawn_random_equipments_from_areas,
     spawn_treasures.
 
-spawn_random_item(Type) :-
-    map_size(MaxX, MaxY),
-    random_between(1, MaxX, X),
-    random_between(1, MaxY, Y),
+spawn_random_equipments_from_areas :-
+    equipment_spawn_area(Type, XMin, XMax, YMin, YMax, Count),
+    spawn_n_equipments(Type, Count, XMin, XMax, YMin, YMax),
+    fail.
+spawn_random_equipments_from_areas.
+
+spawn_n_equipments(_, 0, _, _, _, _) :- !.
+spawn_n_equipments(Type, N, XMin, XMax, YMin, YMax) :-
+    random_between(XMin, XMax, X),
+    random_between(YMin, YMax, Y),
     (   \+ wall(X, Y), 
         \+ location(player, X, Y), 
         \+ equipment(_, _, X, Y), 
         \+ treasure(_, X, Y),
+        \+ healthy_package(X, Y),
+        \+ random_walker(_, X, Y, _, _, _, _),
         \+ exit_pos(X, Y),
         \+ portal_pos(X, Y, _)
-    ->  (Type = sword -> init_sword(X, Y) ; init_knife(X, Y))
-    ;   spawn_random_item(Type) % Retry if position invalid
+    ->  (Type = sword -> init_sword(X, Y) ; init_knife(X, Y)),
+        N1 is N - 1,
+        spawn_n_equipments(Type, N1, XMin, XMax, YMin, YMax)
+    ;   spawn_n_equipments(Type, N, XMin, XMax, YMin, YMax) % Retry
     ).
 
 spawn_treasures :-
@@ -34,6 +43,8 @@ spawn_random_treasure(Type) :-
         \+ location(player, X, Y),
         \+ equipment(_, _, X, Y),
         \+ treasure(_, X, Y),
+        \+ healthy_package(X, Y),
+        \+ random_walker(_, X, Y, _, _, _, _),
         \+ exit_pos(X, Y),
         \+ portal_pos(X, Y, _)
     ->  assert(treasure(Type, X, Y))
