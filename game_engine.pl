@@ -196,6 +196,12 @@ tp(NewX, NewY) :-
     check_combat,
     !.
 
+% --- Debug Commands ---
+dehealthy(Amount) :-
+    decrease_health(Amount),
+    format('~n--- DEBUG: Reduced Health by ~w ---~n', [Amount]),
+    show_map.
+
 % --- Display ---
 show_map :-
     location(player, X, Y),
@@ -317,7 +323,7 @@ start_game :-
     retractall(scaling_level(_)),
     retractall(score(_)),
     assert(health(100)),
-    assert(player_atk(10)),
+    assert(player_atk(15)),
     assert(turn_count(0)),
     assert(score(0)),
     assert(scaling_level(0)),
