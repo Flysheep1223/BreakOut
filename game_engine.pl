@@ -381,8 +381,30 @@ handle_input('w') :- move(up).
 handle_input('s') :- move(down).
 handle_input('a') :- move(left).
 handle_input('d') :- move(right).
+handle_input('t') :- command_mode.
 handle_input('q') :- format('~nQuitting...~n'), assert(game_over).
 handle_input(_) :- format('~nUnknown command.~n').
+
+command_mode :-
+    format('~nEntering command mode. Type "continue." to resume.~n'),
+    command_loop.
+
+command_loop :-
+    read(Command),
+    handle_command(Command).
+
+handle_command(continue) :-
+    format('~nResuming game...~n'),
+    !.
+handle_command(tp(X, Y)) :-
+    (   tp(X, Y)
+    ->  true
+    ;   format('~nTeleport failed (invalid coordinates?).~n')
+    ),
+    command_loop.
+handle_command(Command) :-
+    format('~nUnknown command: ~w~n', [Command]),
+    command_loop.
 
 % --- New Spike Check ---
 % Mode: old (check against existing spikes before they move)
