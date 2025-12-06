@@ -181,8 +181,8 @@ move(Direction) :-
     ),
     location(player, NewX, NewY),
     format('~nYou moved to (~w, ~w).~n', [NewX, NewY]),
-    show_map,
     enemies_tick,
+    show_map,
     % Re-check spike collision AFTER enemies move (for "walking into" or "spawned on top" cases)
     location(player, _FinalX, _FinalY),
     check_combat,
@@ -198,8 +198,8 @@ check_spike_collision :-
     !.
 move(_) :-
     format('~nCannot move in that direction (Invalid direction, blocked, or out of bounds)!~n'),
-    show_map,
     enemies_tick,
+    show_map,
     check_combat,
     check_spike_collision.
 
