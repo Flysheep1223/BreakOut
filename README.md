@@ -68,7 +68,7 @@
 
 **13. `pddl_solver.py`**
 - **功能**: Python 调用 pyperplan 实现的 PDDL 求解器适配器。
-- **算法**: 基于 `pyperplan` 2.1 库实现，负责解析 PDDL 文件、实例化（Grounding）问题并使用 A* 算法（hFF 启发式）寻找最优路径，最终输出 `(move from to)` 动作。  
+- **算法**: 基于 `pyperplan` 2.1 库实现，负责解析 PDDL 文件、实例化（Grounding）问题并使用 A* 算法（hFF 启发式）寻找最优路径，最终输出 `(move from to)` 动作。   
 **巨慢，为了符合作业要求设计的，建议换成下面不调用 pyperplan 的pddl求解器(solver_without_pyperplan_record)，直接复制替换就好，同一套算法，毫秒级反应**。
 
 ### 🎒 物品与装备系统 (items/)
