@@ -382,7 +382,7 @@ start_game :-
     retractall(scaling_level(_)),
     retractall(score(_)),
     assert(health(100)),
-    assert(player_atk(100)),
+    assert(player_atk(30)),
     assert(turn_count(0)),
     assert(score(0)),
     assert(scaling_level(0)),
