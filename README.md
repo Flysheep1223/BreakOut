@@ -1,167 +1,168 @@
-## 📂 项目架构
+## 🚀 Quick Start
+> **⚠️ Performance Note**: The default `pddl/pddl_solver.py` is implemented using `pyperplan` to strictly adhere to course's assignment requirements (Just to demonstrate that we have fully mastered the PDDL intelligent planning format and have a clear understanding of the usage of the Pyperplan library in Python), which causes significant latency. For optimal performance, we highly recommend replacing it with the contents of `solver_without_pyperplan_record`. This alternative uses the identical algorithm but eliminates the external dependency, achieving millisecond-level response times.
+1. Start Prolog: swipl
+2. Load main file: ['main.pl']
+3. Start game: play.
 
-本项目采用严格的模块化设计，将游戏引擎、敌人行为、战斗系统、物品系统和地图数据完全解耦。以下是各文件的详细设计说明：
+## 🎮 Controls
 
-### 🏗️ 核心引擎
-**1. `main.pl` (启动入口)**
-- **功能**: 程序的引导加载器。
-- **设计**: 仅负责加载 `game_engine.pl` 和提供全局启动谓词 `play/0`，保持入口极其精简。
+- **W / A / S / D**: Move Up / Left / Down / Right.
+- **T**: Enter command mode.
+- **Q**: Quit game.
+- **tp(X, Y)**: (In command mode) Teleport to coordinates (X, Y).
+- **continue**: (In command mode) Exit command mode and resume game.
 
-**2. `game_engine.pl` (游戏引擎)**
-- **功能**: 游戏的中枢神经系统，集成战斗、物品、地图和渲染模块。
-- **设计细节**:
-  - **状态管理**: 维护玩家位置、HP、攻击力(ATK)、分数(Score)、回合数(Turn)、敌人强化等级等动态谓词。
-  - **输入循环**: 实时监听键盘输入 (WASD)，并将输入映射为游戏动作。
-  - **命令模式**: 支持 `t` 键进入命令模式，可执行 `tp` 等调试指令。
-  - **物理与碰撞**: 处理移动请求，检测墙壁、边界、事件（如出口）的碰撞。
-  - **UI 渲染**: 在控制台绘制地图，顶部动态显示当前HP、ATK、Score。优化了渲染顺序，确保地图在敌人移动后刷新，以显示最新的敌人位置。
-  - **逻辑调度**: 在玩家每次行动后，依次触发物品检测、战斗判定、事件检查（如胜利条件）和动态难度检查。
-  - **模块化调用**: 整合了 `check_exit` 逻辑，当玩家到达出口时触发结算。
-  - **调试指令**: 新增 `dehealthy(X)` 指令，用于测试扣血机制。
 
-### ⚔️ 战斗与数值系统
-**3. `combat_logic.pl` (战斗逻辑)**
-- **功能**: 封装所有战斗判定、伤害结算与战利品掉落逻辑。
-- **机制**:
-  - **8邻域检测**: 自动检测玩家周围 8 格内的敌人。
-  - **数值对抗**: 若 `玩家ATK >= 敌人ATK` 则消灭敌人；否则玩家扣除HP并眩晕敌人。
-  - **战利品掉落**: 击败特定敌人有概率掉落宝藏：
-    - **Hidden Bee (B)**: 双重掉落 —— 必定掉落 Diamond (O) 于 [26, 12] + 随机原版掉落(5% Diamond, 35% Gold, 60% Silver)。
-    - **BFS Chaser (C)**: 双重掉落 —— 必定掉落 Diamond (O) 于 [30, 20] + 随机原版掉落(5% Diamond, 35% Gold, 60% Silver)。
-    - **Timid Watched (T)**: 必定掉落 Diamond (O) 于 [34, 12] (无随机掉落，维持吸取攻击力设定)。
-    - **Random Walker (R)**: 随机掉落 (1% Diamond, 29% Gold, 70% Silver)。
+## 📂 Project Architecture
 
-**4. `scaling_manager.pl` (动态难度管理)**
-- **功能**: 控制游戏随时间推移的难度增长。
-- **机制**: 每经过 **10 个回合**，地图上所有敌人的 ATK 自动增加 **10%**。
+This project adopts a strict modular design, completely decoupling the game engine, enemy behavior, combat system, item system, and map data. Below are the detailed design descriptions for each file:
 
-### 🤖 敌人系统 (enemies/)
-敌人系统被设计为插件式结构，由管理器统一调度。
+### 🏗️ Core Engine
+**1. `main.pl` (Entry Point)**
+- **Function**: The bootloader of the program.
+- **Design**: Responsible only for loading `game_engine.pl` and providing the global startup predicate `play/0`, keeping the entry point extremely minimal.
 
-**5. `ai_manager.pl` (AI 总管)**
-- **功能**: 统一调度 `init_enemies` 和 `enemies_tick`，负责分发所有敌人的初始化与行动指令。
+**2. `game_engine.pl` (Game Engine)**
+- **Function**: The central nervous system of the game, integrating combat, items, map, and rendering modules.
+- **Design Details**:
+  - **State Management**: Maintains dynamic predicates such as player position, HP, Attack (ATK), Score, Turn count, and enemy enhancement levels.
+  - **Input Loop**: Real-time listening for keyboard input (WASD) and mapping inputs to game actions.
+  - **Command Mode**: Supports pressing `t` to enter command mode, allowing execution of debug commands like `tp`.
+  - **Physics & Collision**: Handles movement requests, detecting collisions with walls, boundaries, and events (like exits).
+  - **UI Rendering**: Draws the map on the console, dynamically displaying current HP, ATK, and Score at the top. Optimized rendering order to ensure the map refreshes after enemy movement to show the latest enemy positions.
+  - **Logic Scheduling**: After each player action, sequentially triggers item detection, combat resolution, event checks (like victory conditions), and dynamic difficulty checks.
+  - **Modular Calls**: Integrates `check_exit` logic, triggering settlement when the player reaches the exit.
+  - **Debug Commands**: Added `dehealthy(X)` command for testing HP deduction mechanisms.
 
-**6. `ai_utils.pl` (AI 工具库)**
-- **功能**: 提供通用的网格计算、碰撞检测和边界检查谓词。
+### ⚔️ Combat & Numerical System
+**3. `combat_logic.pl` (Combat Logic)**
+- **Function**: Encapsulates all combat resolution, damage calculation, and loot drop logic.
+- **Mechanisms**:
+  - **8-Neighbor Detection**: Automatically detects enemies within the surrounding 8 grids of the player.
+  - **Numerical Confrontation**: If `Player ATK >= Enemy ATK`, the enemy is eliminated; otherwise, the player loses HP and the enemy is stunned.
+  - **Loot Drop**: Defeating specific enemies has a probability of dropping treasures:
+    - **Hidden Bee (B)**: Double Drop — Guaranteed Diamond (O) at [26, 12] + Random original drop (5% Diamond, 35% Gold, 60% Silver).
+    - **BFS Chaser (C)**: Double Drop — Guaranteed Diamond (O) at [30, 20] + Random original drop (5% Diamond, 35% Gold, 60% Silver).
+    - **Timid Watched (T)**: Guaranteed Diamond (O) at [34, 12] (No random drop, maintains ATK absorption setting).
+    - **Random Walker (R)**: Random drop (1% Diamond, 29% Gold, 70% Silver).
 
-**7. `bfs_chaser.pl` (智能追捕者 - 代号 'C')**
-- **行为**: 觉醒后使用 BFS 算法寻找最短路径追击玩家。击败后概率掉落宝藏。
+**4. `scaling_manager.pl` (Dynamic Difficulty Management)**
+- **Function**: Controls the increase in game difficulty over time.
+- **Mechanisms**: Every **10 turns**, the ATK of all enemies on the map automatically increases by **10%**.
 
-**8. `random_walker.pl` (巡逻者 - 代号 'R')**
-- **行为**: 在限制区域内进行随机巡逻。击败后概率掉落宝藏。
+### 🤖 Enemy System (enemies/)
+The enemy system is designed as a plugin structure, unified and scheduled by a manager.
 
-**9. `hidden_bee.pl` (原 static_boss.pl - 代号 'B')**
-- **行为**: 周期性释放向右移动的尖刺 (^) 攻击玩家。击败后概率掉落宝藏。
+**5. `ai_manager.pl` (AI Manager)**
+- **Function**: Unifies scheduling of `init_enemies` and `enemies_tick`, responsible for distributing initialization and action instructions for all enemies.
 
-**10. `timid_watched.pl` (中Boss - 代号 'T')**
-- **行为**: 区域游荡，被击败后玩家可吞噬其攻击力。
+**6. `ai_utils.pl` (AI Utilities)**
+- **Function**: Provides general grid calculation, collision detection, and boundary check predicates.
 
-**11. `smart_thief.pl` (智能窃贼 - 代号 'I')**
-- **行为**: 使用 PDDL 规划器智能寻路，优先寻找并偷窃地图上的宝藏。
-- **集成**: 通过 `process_create` 调用外部 Python 脚本求解 PDDL 问题。
+**7. `bfs_chaser.pl` (Smart Chaser - Code 'C')**
+- **Behavior**: Uses BFS algorithm to find the shortest path to chase the player after awakening. Probabilistic loot drop upon defeat.
 
-### 🧠 PDDL 规划模块 (pddl/)
-本模块实现了一个简易的 STRIPS 规划器集成，用于控制 `Smart Thief` 的行为。
+**8. `random_walker.pl` (Patroller - Code 'R')**
+- **Behavior**: Patrols randomly within a restricted area. Probabilistic loot drop upon defeat.
+
+**9. `hidden_bee.pl` (Original static_boss.pl - Code 'B')**
+- **Behavior**: Periodically releases spikes (^) moving right to attack the player. Probabilistic loot drop upon defeat.
+
+**10. `timid_watched.pl` (Mid-Boss - Code 'T')**
+- **Behavior**: Wanders in an area; upon defeat, the player can absorb its attack power.
+
+**11. `smart_thief.pl` (Smart Thief - Code 'I')**
+- **Behavior**: Uses a PDDL planner for intelligent pathfinding, prioritizing finding and stealing treasures on the map.
+- **Integration**: Invokes an external Python script via `process_create` to solve PDDL problems.
+
+### 🧠 PDDL Planning Module (pddl/)
+This module implements a simple STRIPS planner integration for controlling the behavior of the `Smart Thief`.
 
 **12. `domain.pddl`**
-- **功能**: 定义 Grid World 领域，包含 `location` 类型、`at`, `connected` 谓词和 `move` 动作。
+- **Function**: Defines the Grid World domain, including `location` type, `at`, `connected` predicates, and `move` action.
 
 **13. `pddl_solver.py`**
-- **功能**: Python 调用 pyperplan 实现的 PDDL 求解器适配器。
-- **算法**: 基于 `pyperplan` 2.1 库实现，负责解析 PDDL 文件、实例化（Grounding）问题并使用 A* 算法（hFF 启发式）寻找最优路径，最终输出 `(move from to)` 动作。   
-**巨慢，为了符合作业要求设计的，建议换成下面不调用 pyperplan 的pddl求解器(solver_without_pyperplan_record)，直接复制替换就好，同一套算法，毫秒级反应**。
+- **Function**: Python adapter for PDDL solver using pyperplan.
+- **Algorithm**: Implemented based on the `pyperplan` 2.1 library, responsible for parsing PDDL files, instantiating (Grounding) the problem, and using the A* algorithm (hFF heuristic) to find the optimal path, finally outputting `(move from to)` actions.
+**Extremely slow, designed to meet assignment requirements. It is recommended to replace it with the PDDL solver below that does not call pyperplan (solver_without_pyperplan_record), just copy and replace, same algorithm, millisecond response**.
 
-### 🎒 物品与装备系统 (items/)
-**14. `items/item_manager.pl` (物品管理器)**
-- **功能**: 负责在游戏开始时随机生成装备和宝藏，并处理玩家的拾取逻辑。
-- **机制**: 
-  - **生成策略**: 
-    - **急救包 (H)**: 优先生成，依据 `health_spawn_area` 配置。
-    - **装备 (S/K)**: 随后生成，依据 `equipment_spawn_area` 配置，并自动避开急救包和敌人。
-    - **宝藏 (O/G/V)**: 最后生成，避开所有已存在的实体，且不会生成在 Boss 房间禁区 `[24,14]-[36,22]` 内。
-  - **拾取逻辑**: 玩家重合时触发效果，装备增加ATK，宝藏增加Score。
+### 🎒 Item & Equipment System (items/)
+**14. `items/item_manager.pl` (Item Manager)**
+- **Function**: Responsible for randomly generating equipment and treasures at the start of the game, and handling player pickup logic.
+- **Mechanisms**: 
+  - **Spawn Strategy**: 
+    - **Healthy Package (H)**: Spawned first, based on `health_spawn_area` configuration.
+    - **Equipment (S/K)**: Spawned subsequently, based on `equipment_spawn_area` configuration, automatically avoiding healthy packages and enemies.
+    - **Treasure (O/G/V)**: Spawned last, avoiding all existing entities, and will not spawn within the Boss room restricted area `[24,14]-[36,22]`.
+  - **Pickup Logic**: Triggered when the player overlaps; equipment increases ATK, treasures increase Score.
 
-**15. `items/equipments/sword.pl` (铁剑 - 代号 'S')**
-- **效果**: 拾取后玩家 ATK +10。
+**15. `items/equipments/sword.pl` (Sword - Code 'S')**
+- **Effect**: Player ATK +10 upon pickup.
 
-**16. `items/equipments/knife.pl` (匕首 - 代号 'K')**
-- **效果**: 拾取后玩家 ATK +5。
+**16. `items/equipments/knife.pl` (Knife - Code 'K')**
+- **Effect**: Player ATK +5 upon pickup.
 
-**17. `items/tools/heathy_package.pl` (急救包 - 代号 'H')**
-- **效果**: 拾取后立即回复 40 点生命值。
+**17. `items/tools/heathy_package.pl` (Healthy Package - Code 'H')**
+- **Effect**: Immediately restores 40 HP upon pickup.
 
-**18. `items/treasures/diamond.pl` (钻石 - 代号 'O')**
-- **效果**: 拾取后 Score +1000。
+**18. `items/treasures/diamond.pl` (Diamond - Code 'O')**
+- **Effect**: Score +1000 upon pickup.
 
-**19. `items/treasures/gold.pl` (黄金 - 代号 'G')**
-- **效果**: 拾取后 Score +500。
+**19. `items/treasures/gold.pl` (Gold - Code 'G')**
+- **Effect**: Score +500 upon pickup.
 
-**20. `items/treasures/silver.pl` (白银 - 代号 'V')**
-- **效果**: 拾取后 Score +200。
+**20. `items/treasures/silver.pl` (Silver - Code 'V')**
+- **Effect**: Score +200 upon pickup.
 
-### 🗺️ 地图配置 (maps/)
-**21. `level1.pl` (关卡配置)**
-- **功能**: 纯数据文件，定义地图边界、墙壁布局、出生点、出口位置和特殊区域。
-- **配置项**:
-  - `map_segment`: 墙壁段。
-  - `health_spawn_area`: 急救包随机生成区域。
-  - `equipment_spawn_area`: 装备随机生成区域。
+### 🗺️ Map Configuration (maps/)
+**21. `level1.pl` (Level Configuration)**
+- **Function**: Pure data file, defining map boundaries, wall layout, spawn point, exit location, and special areas.
+- **Configuration Items**:
+  - `map_segment`: Wall segments.
+  - `health_spawn_area`: Random spawn area for healthy packages.
+  - `equipment_spawn_area`: Random spawn area for equipment.
 
-## 🚀 快速运行
+## 📊 Game Stats & Config Reference
 
-1. 启动 Prolog: swipl
-2. 加载主文件: ['main.pl']
-3. 开始游戏: play.
+For convenient debugging and balance adjustment, the following lists all core game values and their definition locations in the source code.
 
-## 🎮 控制
-
-- **W / A / S / D**: 上 / 左 / 下 / 右 移动。
-- **T**: 进入命令模式。
-- **Q**: 退出游戏。
-- **tp(X, Y)**: (命令模式下) 传送到坐标 (X, Y)。
-- **continue**: (命令模式下) 退出命令模式，恢复游戏。
-
-## 📊 游戏数值与配置速查
-
-为了方便调试和平衡性调整，以下列出了游戏中所有的核心数值及其在源码中的定义位置。
-
-### 🧑 玩家初始数值
-- **初始 HP**: 100
+### 🧑 Player Initial Stats
+- **Initial HP**: 100
   - 📍 `game_engine.pl:346` (`assert(health(100))`)
-- **初始 ATK**: 15
+- **Initial ATK**: 15
   - 📍 `game_engine.pl:347` (`assert(player_atk(15))`)
 
-### 🎒 物品数值
-- **装备**
+### 🎒 Item Stats
+- **Equipment**
   - **Sword (S)**: ATK +10
     - 📍 `items/equipments/sword.pl:5` (`player_atk(CurrentAtk), NewAtk is CurrentAtk + 10`)
   - **Knife (K)**: ATK +5
     - 📍 `items/equipments/knife.pl:5` (`player_atk(CurrentAtk), NewAtk is CurrentAtk + 5`)
-- **消耗品**
+- **Consumables**
   - **Healthy Package (H)**: HP +40
     - 📍 `items/tools/heathy_package.pl:7` (`increase_health(40)`)
-- **宝藏 (Score)**
-  - **Diamond (O)**: +1000 分
+- **Treasure (Score)**
+  - **Diamond (O)**: +1000 Score
     - 📍 `items/treasures/diamond.pl:1` (`treasure_value(diamond, 1000, 'Diamond')`)
-  - **Gold (G)**: +500 分
+  - **Gold (G)**: +500 Score
     - 📍 `items/treasures/gold.pl:1` (`treasure_value(gold, 500, 'Gold')`)
-  - **Silver (V)**: +200 分
+  - **Silver (V)**: +200 Score
     - 📍 `items/treasures/silver.pl:1` (`treasure_value(silver, 200, 'Silver')`)
 
-### 🤖 敌人数值
-| 敌人代号 | 名称 | 初始 ATK | 初始 Stun | 定义文件 |
+### 🤖 Enemy Stats
+| Enemy Code | Name | Initial ATK | Initial Stun | Definition File |
 | :--- | :--- | :--- | :--- | :--- |
 | **C** | BFS Chaser | 15 | 0 | `enemies/bfs_chaser.pl:12` |
 | **R** | Random Walker | 10 | 0 | `enemies/random_walker.pl:10` |
 | **B** | Hidden Bee | 20 | 0 | `enemies/hidden_bee.pl:10` |
 | **T** | Timid Watched | 100 | 0 | `enemies/timid_watched.pl:10` |
-| **I** | Smart Thief | 15（无法触发战斗） | 0 | `enemies/smart_thief.pl:18` |
+| **I** | Smart Thief | 15 (Cannot trigger combat) | 0 | `enemies/smart_thief.pl:18` |
 
-### ⚙️ 游戏机制数值
-- **难度动态提升 (Scaling)**
-  - **触发周期**: 每 10 回合
-  - **提升幅度**: 敌人 ATK +10%
+### ⚙️ Game Mechanic Stats
+- **Dynamic Difficulty (Scaling)**
+  - **Trigger Cycle**: Every 10 turns
+  - **Increase Amount**: Enemy ATK +10%
   - 📍 `scaling_manager.pl:5-12` (`0 is Turn mod 10`, `NewAtk is round(Atk * 1.1)`)
-- **尖刺伤害**
-  - **伤害值**: 5 HP
+- **Spike Damage**
+  - **Damage Value**: 5 HP
   - 📍 `game_engine.pl:390` (`decrease_health(5)`)
