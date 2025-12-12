@@ -1,5 +1,9 @@
 ## 🚀 Quick Start
 > **⚠️ Performance Note**: The default `pddl/pddl_solver.py` is implemented using `pyperplan` to strictly adhere to course's assignment requirements (Just to demonstrate that we have fully mastered the PDDL intelligent planning format and have a clear understanding of the usage of the Pyperplan library in Python), which causes significant latency. For optimal performance, we highly recommend replacing it with the contents of `solver_without_pyperplan_record`. This alternative uses the identical algorithm but eliminates the external dependency, achieving millisecond-level response times.
+0. Environment Setup:
+   - Install SWI-Prolog on your system.
+   - python 3.x
+   - pyperplan 2.1 (for planning)
 1. Start Prolog: swipl
 2. Load main file: ['Breakout.pl']
 3. Start game: play.
