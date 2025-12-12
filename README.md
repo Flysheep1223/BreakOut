@@ -1,16 +1,15 @@
 ## 🚀 Quick Start
 > **⚠️ Performance Note**: The default `pddl/pddl_solver.py` is implemented using `pyperplan` to strictly adhere to course's assignment requirements (Just to demonstrate that we have fully mastered the PDDL intelligent planning format and have a clear understanding of the usage of the Pyperplan library in Python), which causes significant latency. For optimal performance, we highly recommend replacing it with the contents of `solver_without_pyperplan_record`. This alternative uses the identical algorithm but eliminates the external dependency, achieving millisecond-level response times.
 1. Start Prolog: swipl
-2. Load main file: ['main.pl']
+2. Load main file: ['Breakout.pl']
 3. Start game: play.
 
 ## 🎮 Controls
 
-- **W / A / S / D**: Move Up / Left / Down / Right.
-- **T**: Enter command mode.
-- **Q**: Quit game.
-- **tp(X, Y)**: (In command mode) Teleport to coordinates (X, Y).
-- **continue**: (In command mode) Exit command mode and resume game.
+- **W.**: Move Up
+- **A.**: Move Left
+- **S.**: Move Down
+- **D.**: Move Right
 
 
 ## 📂 Project Architecture

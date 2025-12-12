@@ -356,9 +356,9 @@ print_map_char(X, Y, _, _) :-
 print_map_char(X, Y, _, _) :-
     wall(X, Y),
     (   (is_wall(X, Y+1); is_wall(X, Y-1)),
-        \+ (is_wall(X+1, Y); is_wall(X-1, Y)) -> format('|')
+        \+ (is_wall(X+1, Y); is_wall(X-1, Y)) -> format(' |')
     ;   (is_wall(X+1, Y); is_wall(X-1, Y)),
-        \+ (is_wall(X, Y+1); is_wall(X, Y-1)) -> format('-')
+        \+ (is_wall(X, Y+1); is_wall(X, Y-1)) -> format(' -')
     ;   format(' +')
     ), !.
 
@@ -394,6 +394,7 @@ start_game :-
     spawn_items,
     format('Controls: WASD to move, Q to quit.~n'),
     show_map,
+    command_mode,
     game_loop.
 
 game_loop :-
@@ -420,27 +421,47 @@ handle_input('t') :- command_mode.
 handle_input('D') :- move(right).
 handle_input('q') :- format('~nQuitting...~n'), assert(game_over).
 handle_input('Q') :- format('~nQuitting...~n'), assert(game_over).
-handle_input(_) :- format('~nUnknown command.~n').
+handle_input(_) :- true.
 
 command_mode :-
-    format('~nEntering command mode. Type "continue." to resume.~n'),
     command_loop.
 
 command_loop :-
-    read(Command),
-    handle_command(Command).
+    read_term(Command, [variable_names(Names)]),
+    handle_command(Command, Names).
 
-handle_command(continue) :-
+handle_command(Var, Names) :-
+    var(Var),
+    !,
+    handle_var_command(Var, Names).
+
+handle_command(continue, _) :-
     format('~nResuming game...~n'),
     !.
-handle_command(tp(X, Y)) :-
+
+handle_command(tp(X, Y), _) :-
     (   tp(X, Y)
     ->  true
     ;   format('~nTeleport failed (invalid coordinates?).~n')
     ),
     command_loop.
-handle_command(Command) :-
-    format('~nUnknown command: ~w~n', [Command]),
+
+handle_command(w, _) :- move(up), command_loop.
+handle_command(s, _) :- move(down), command_loop.
+handle_command(a, _) :- move(left), command_loop.
+handle_command(d, _) :- move(right), command_loop.
+
+handle_command(_, _) :-
+    % format('~nUnknown command.~n'), % Silently ignore as requested
+    command_loop.
+
+handle_var_command(Var, Names) :-
+    (   member('W'=Var, Names) -> move(up)
+    ;   member('S'=Var, Names) -> move(down)
+    ;   member('A'=Var, Names) -> move(left)
+    ;   member('D'=Var, Names) -> move(right)
+    ;   true
+    ),
     command_loop.
 
 % --- New Spike Check ---

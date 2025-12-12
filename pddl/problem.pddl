@@ -3,7 +3,7 @@
   (:objects
   )
   (:init
-    (at c_45_32)
+    (at c_33_31)
     (connected c_1_1 c_2_1)
     (connected c_1_1 c_1_2)
     (connected c_1_2 c_2_2)
@@ -6008,6 +6008,6 @@
     (connected c_59_33 c_59_32)
   )
   (:goal
-    (at c_46_17)
+    (at c_42_31)
   )
 )
